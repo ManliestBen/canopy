@@ -16,6 +16,26 @@ interface TabConfig {
   domains?: string[];
 }
 
+const THEME_KEY = 'canopy-theme';
+type ThemeValue = 'light' | 'dark' | 'system';
+
+function getStoredTheme(): ThemeValue {
+  try {
+    const s = localStorage.getItem(THEME_KEY);
+    if (s === 'light' || s === 'dark' || s === 'system') return s;
+  } catch {}
+  return 'system';
+}
+
+function applyTheme(value: ThemeValue) {
+  const html = document.documentElement;
+  if (value === 'system') html.removeAttribute('data-theme');
+  else html.setAttribute('data-theme', value);
+}
+
+// Apply stored theme before first paint to avoid flash
+applyTheme(getStoredTheme());
+
 const TABS: TabConfig[] = [
   { id: 'lighting', label: 'Lighting', domain: 'light' },
   { id: 'climate', label: 'Climate', domain: 'climate' },
@@ -31,6 +51,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('lighting');
+  const [theme, setTheme] = useState<ThemeValue>(getStoredTheme);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -52,6 +73,13 @@ function App() {
     return () => clearInterval(t);
   }, [refresh]);
 
+  useEffect(() => {
+    applyTheme(theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {}
+  }, [theme]);
+
   const onServiceCall = useCallback(() => {
     refresh();
   }, [refresh]);
@@ -65,16 +93,29 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <h1>Canopy</h1>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading}
-            style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          >
-            {loading ? '…' : 'Refresh'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>Theme</span>
+            <select
+              aria-label="Theme"
+              value={theme}
+              onChange={(e) => setTheme((e.target.value as ThemeValue))}
+              className="theme-select"
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={loading}
+              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            >
+              {loading ? '…' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </header>
 
