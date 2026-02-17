@@ -30,6 +30,7 @@ export interface CalendarEvent {
   end?: string;
   allDay?: boolean;
   location?: string;
+  description?: string;
   htmlLink?: string;
   calendarId?: string;
 }

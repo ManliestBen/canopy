@@ -49,8 +49,59 @@ export interface GetCalendarEventsOptions {
 
 export interface GetCalendarEventsResponse {
   events: CalendarEvent[];
-  calendarId?: string;
-  calendarSummary?: string;
+  calendarId?: string | null;
+  calendarSummary?: string | null;
+  /** Map of calendar ID → human-readable title */
+  calendarSummaries?: Record<string, string>;
+  /** Map of calendar ID → color index (0–19) for saved calendars */
+  calendarColors?: Record<string, number>;
+  /** Per-calendar error messages when some calendars fail to load */
+  calendarErrors?: string[];
+}
+
+/** Saved calendar (stored in DB). */
+export interface SavedCalendar {
+  id: number;
+  title: string;
+  calendarId: string;
+  colorIndex: number;
+}
+
+export async function getSavedCalendars(): Promise<SavedCalendar[]> {
+  const res = await fetch('/calendar-api/saved-calendars');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to load saved calendars');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function addSavedCalendar(body: { title: string; calendarId: string; colorIndex?: number }): Promise<SavedCalendar> {
+  const res = await fetch('/calendar-api/saved-calendars', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to add calendar');
+  return data as SavedCalendar;
+}
+
+export async function updateSavedCalendar(id: number, updates: { title?: string; calendarId?: string; colorIndex?: number }): Promise<SavedCalendar> {
+  const res = await fetch(`/calendar-api/saved-calendars/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to update calendar');
+  return data as SavedCalendar;
+}
+
+export async function deleteSavedCalendar(id: number): Promise<void> {
+  const res = await fetch(`/calendar-api/saved-calendars/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error || 'Failed to delete calendar');
+  }
 }
 
 /** Google Calendar (proxied to calendar server in dev or served by server.js in prod). Returns { events, calendarId, calendarSummary }. */
