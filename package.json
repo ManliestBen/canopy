@@ -1,0 +1,23 @@
+{
+  "name": "canopy",
+  "private": true,
+  "type": "module",
+  "description": "Home Assistant dashboard and API export tools",
+  "scripts": {
+    "export": "node ha-export/export-ha-api.js",
+    "export:ha": "node ha-export/export-ha-api.js",
+    "install:dashboard": "npm install --prefix dashboard",
+    "dev": "npm run dev --prefix dashboard",
+    "build": "npm run build --prefix dashboard",
+    "serve": "npm run serve --prefix dashboard",
+    "preview": "npm run preview --prefix dashboard"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "ws": "^8.18.0",
+    "yaml": "^2.8.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

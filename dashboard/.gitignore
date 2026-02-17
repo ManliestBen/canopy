@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Secrets and local config — never commit
+.env
+.env.local
+.env.*.local
+SERVICE_ACCOUNT.json
+*credentials*.json
+*-credentials.json
+*.pem
+*.key
+
+# Local DB and backups (when SQLite/backup feature is added)
+*.db
+*.sqlite
+*.sqlite3
+backups/

@@ -1,0 +1,52 @@
+# Dependencies (each package has its own node_modules; root + dashboard is normal)
+node_modules/
+
+# -----------------------------------------------------------------------------
+# Secrets and local config — never commit
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+.env.vault
+# Template only; safe to commit:
+# .env.example
+
+# Google / service account keys (path used by dashboard/lib/calendar.js)
+SERVICE_ACCOUNT.json
+*credentials*.json
+*-credentials.json
+dashboard/.env
+dashboard/SERVICE_ACCOUNT.json
+dashboard/*credentials*.json
+
+# Private keys
+*.pem
+*.key
+
+# Local DB and backups (SQLite, backup exports)
+*.db
+*.sqlite
+*.sqlite3
+backups/
+*.backup
+*.bak
+
+# -----------------------------------------------------------------------------
+# Generated / instance-specific (run export locally)
+# -----------------------------------------------------------------------------
+home-assistant-api-reference.md
+home-assistant-openapi.yaml
+ha-export/home-assistant-api-reference.md
+ha-export/home-assistant-openapi.yaml
+
+# Build output
+dashboard/dist
+dashboard/node_modules
+
+# IDE / OS
+.DS_Store
+*.log
+Thumbs.db
