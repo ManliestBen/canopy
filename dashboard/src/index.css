@@ -13,10 +13,18 @@
   --danger: #f85149;
   --radius: 12px;
   --font: 'Outfit', system-ui, sans-serif;
+  --header-height: 3.5rem;
+  --tabs-height: 3rem;
+  --panel-padding: 1.25rem;
+  --time-slot-height: 48px;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
@@ -57,7 +65,11 @@ input[type="range"] {
 }
 
 .app-header {
-  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  height: var(--header-height);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--border);
   background: var(--bg-card);
 }
@@ -70,9 +82,12 @@ input[type="range"] {
 }
 
 .tabs {
+  flex-shrink: 0;
+  height: var(--tabs-height);
   display: flex;
+  align-items: center;
   gap: 0.25rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0 1.5rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   overflow-x: auto;
@@ -80,9 +95,10 @@ input[type="range"] {
 
 .tabs button {
   padding: 0.5rem 1rem;
+  min-height: 2.25rem;
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
   white-space: nowrap;
 }
 
@@ -98,8 +114,20 @@ input[type="range"] {
 
 .tab-panel {
   flex: 1;
-  padding: 1.5rem;
+  min-height: 0;
+  padding: var(--panel-padding);
   overflow: auto;
+}
+
+.tab-panel--calendar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #f8fafc;
+}
+
+.tab-panel--calendar .loading {
+  color: #64748b;
 }
 
 .entity-grid {
@@ -189,3 +217,400 @@ input[type="range"] {
   background: var(--bg-card-hover);
   color: var(--text);
 }
+
+/* -----------------------------------------------------------------------------
+   Calendar tab — light, pastel 2-week view (reference: 2-week-view.png)
+   ----------------------------------------------------------------------------- */
+.calendar-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 0;
+}
+
+.calendar-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.calendar-header .calendar-meta {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.calendar-header .calendar-refresh {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.calendar-header .calendar-refresh:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.calendar-view-select {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.calendar-view-select:hover {
+  border-color: #cbd5e1;
+}
+
+.calendar-2week {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+/* Biweekly / monthly: week per row, no horizontal scroll */
+.calendar-week-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.calendar-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.calendar-week-row .calendar-day-col {
+  flex: none;
+  min-width: 0;
+}
+
+/* Daily / weekly: one grid so header, all-day, and body share same column widths (subgrid) */
+.calendar-time-grid-wrap {
+  display: grid;
+  grid-template-columns: 48px repeat(7, minmax(4rem, 1fr));
+  /* Let all-day row take its content height; body can shrink and scroll when needed */
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 0;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.calendar-time-grid-wrap.calendar-time-grid-daily {
+  grid-template-columns: 48px 1fr;
+}
+
+.calendar-time-grid-header {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.calendar-time-grid-header .time-col {
+  padding: 0.5rem;
+  border-right: 1px solid #e2e8f0;
+}
+
+.calendar-time-grid-header .day-label {
+  text-align: center;
+  padding: 0.75rem;
+  min-width: 0;
+  font-weight: 600;
+  color: #334155;
+  border-right: 1px solid #e2e8f0;
+}
+
+.calendar-time-grid-header .day-label:last-of-type {
+  border-right: none;
+}
+
+.calendar-time-grid-header .day-label .day-num {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.calendar-time-grid-all-day {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-content: start;
+  /* Ensure row is always tall enough for wrapped "All day" label (2 lines) + padding */
+  min-height: 2.75em;
+  overflow: visible;
+}
+
+.calendar-time-grid-all-day .time-col {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  border-right: 1px solid #e2e8f0;
+  /* Prevent row from collapsing to one line when "All day" wraps in narrow column */
+  min-height: 2.5em;
+}
+
+.calendar-time-grid-all-day .day-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  min-width: 0;
+  width: 100%;
+  border-right: 1px solid #e2e8f0;
+}
+
+/* All-day event cards: full width of column (same as biweekly/monthly .calendar-event-card) */
+.calendar-time-grid-all-day .day-slot > * {
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.calendar-time-grid-all-day .day-slot:last-of-type {
+  border-right: none;
+}
+
+.calendar-time-grid-body {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid #e2e8f0;
+}
+
+.calendar-time-grid-hours {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e2e8f0;
+}
+
+.calendar-time-grid-hours .hour-row {
+  flex: 1;
+  min-height: 0;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.calendar-time-grid-slots {
+  position: relative;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 2 / -1;
+  min-height: 0;
+}
+
+.calendar-time-grid-column {
+  position: relative;
+  min-height: 0;
+  border-right: 1px solid #e2e8f0;
+}
+
+.calendar-time-grid-column:last-of-type {
+  border-right: none;
+}
+
+/* Timed event cards: same 0.75rem inset as all-day row / biweekly-monthly columns */
+.calendar-time-grid-event {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  font-size: 0.75rem;
+  box-sizing: border-box;
+}
+
+.calendar-time-grid-event .event-title { font-weight: 600; color: #1e293b; }
+.calendar-time-grid-event .event-time { font-size: 0.65rem; color: #475569; }
+
+.calendar-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-day-nav button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.calendar-day-nav button:hover {
+  background: #f1f5f9;
+}
+
+.calendar-day-nav .current-day-label {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.calendar-day-col {
+  flex: 0 0 min(max(120px, 11vw), 160px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.calendar-day-col.is-today {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.calendar-day-header {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.15rem;
+}
+
+.calendar-day-date {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-day-count {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.calendar-event-card {
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  text-align: left;
+  transition: box-shadow 0.15s;
+}
+
+.calendar-event-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.calendar-event-card .event-title {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #1e293b;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+.calendar-event-card .event-time {
+  font-size: 0.7rem;
+  color: #475569;
+  font-weight: 400;
+}
+
+.calendar-event-card .event-location {
+  font-size: 0.65rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.calendar-event-card .calendar-event-link {
+  display: inline-block;
+  font-size: 0.65rem;
+  color: #3b82f6;
+  margin-top: 0.25rem;
+}
+
+.calendar-event-card .calendar-event-link:hover {
+  text-decoration: underline;
+}
+
+/* Calendar event colors — match weekly-schedules reference (soft pastels) */
+.calendar-event-card.pastel-0 { background: #FFF8E1; }   /* very light yellow/cream */
+.calendar-event-card.pastel-1 { background: #E6FFDD; }   /* very light green */
+.calendar-event-card.pastel-2 { background: #A5E0DA; }   /* light teal/mint */
+.calendar-event-card.pastel-3 { background: #D4E8F7; }   /* light blue */
+.calendar-event-card.pastel-4 { background: #E0D4ED; }   /* light lavender */
+.calendar-event-card.pastel-5 { background: #FFDDE7; }   /* light pink */
+.calendar-event-card.pastel-6 { background: #FFCCCC; }   /* light salmon/red */
+.calendar-event-card.pastel-7 { background: #FFE4D4; }   /* light peach */
+.calendar-event-card.pastel-8 { background: #E8E4F0; }   /* light periwinkle */
+.calendar-event-card.pastel-9 { background: #D4F0F0; }   /* light aqua */
+
+/* Same pastels for time-grid events (daily/weekly) */
+.calendar-time-grid-event.pastel-0, .calendar-time-grid-all-day .day-slot > .pastel-0 { background: #FFF8E1; }
+.calendar-time-grid-event.pastel-1, .calendar-time-grid-all-day .day-slot > .pastel-1 { background: #E6FFDD; }
+.calendar-time-grid-event.pastel-2, .calendar-time-grid-all-day .day-slot > .pastel-2 { background: #A5E0DA; }
+.calendar-time-grid-event.pastel-3, .calendar-time-grid-all-day .day-slot > .pastel-3 { background: #D4E8F7; }
+.calendar-time-grid-event.pastel-4, .calendar-time-grid-all-day .day-slot > .pastel-4 { background: #E0D4ED; }
+.calendar-time-grid-event.pastel-5, .calendar-time-grid-all-day .day-slot > .pastel-5 { background: #FFDDE7; }
+.calendar-time-grid-event.pastel-6, .calendar-time-grid-all-day .day-slot > .pastel-6 { background: #FFCCCC; }
+.calendar-time-grid-event.pastel-7, .calendar-time-grid-all-day .day-slot > .pastel-7 { background: #FFE4D4; }
+.calendar-time-grid-event.pastel-8, .calendar-time-grid-all-day .day-slot > .pastel-8 { background: #E8E4F0; }
+.calendar-time-grid-event.pastel-9, .calendar-time-grid-all-day .day-slot > .pastel-9 { background: #D4F0F0; }
+
+.calendar-empty-day {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  padding: 0.5rem 0;
+}
+
+.calendar-no-events-box {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.calendar-no-events-box p { margin: 0 0 0.5rem 0; }
+.calendar-no-events-box strong { color: #334155; }
+.calendar-no-events-box code { font-size: 0.85em; background: #f1f5f9; padding: 0.1em 0.35em; border-radius: 4px; }

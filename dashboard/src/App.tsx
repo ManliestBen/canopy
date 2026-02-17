@@ -90,7 +90,7 @@ function App() {
         ))}
       </nav>
 
-      <main className="tab-panel">
+      <main className={`tab-panel${activeTab === 'calendar' ? ' tab-panel--calendar' : ''}`}>
         {error && (
           <div className="error-banner">
             {error}. Check that the HA proxy is running and VITE_HA_BASE_URL / VITE_HA_TOKEN are set.
