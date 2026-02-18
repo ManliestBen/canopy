@@ -51,7 +51,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('lighting');
-  const [theme, setTheme] = useState<ThemeValue>(getStoredTheme);
+  const [theme, setTheme] = useState<ThemeValue>(() => getStoredTheme());
 
   const refresh = useCallback(async () => {
     setError(null);

@@ -10,6 +10,8 @@ export default ({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: true,
+      port: 5173,
       proxy: {
         '/calendar-api': {
           target: calendarTarget,
