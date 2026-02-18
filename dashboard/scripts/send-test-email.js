@@ -11,6 +11,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { buildRawMessage } from '../lib/email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,22 +35,6 @@ function loadOAuthCredentials() {
     clientSecret: client.client_secret,
     redirectUri: client.redirect_uris?.[0] || 'http://localhost:3000/oauth2callback',
   };
-}
-
-function buildRawMessage(to, subject, body) {
-  const lines = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    '',
-    body,
-  ];
-  const message = lines.join('\n');
-  return Buffer.from(message)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
 }
 
 async function main() {
