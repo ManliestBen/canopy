@@ -19,17 +19,29 @@ interface TabConfig {
 const THEME_KEY = 'canopy-theme';
 type ThemeValue = 'light' | 'dark' | 'system';
 
+const THEME_OPTIONS: { value: ThemeValue; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+
 function getStoredTheme(): ThemeValue {
   try {
     const s = localStorage.getItem(THEME_KEY);
     if (s === 'light' || s === 'dark' || s === 'system') return s;
+    if (s === 'liquid-glass-light') return 'light';
+    if (s === 'liquid-glass-dark') return 'dark';
   } catch {}
   return 'system';
 }
 
+function getSystemTheme(): 'light' | 'dark' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function applyTheme(value: ThemeValue) {
   const html = document.documentElement;
-  if (value === 'system') html.removeAttribute('data-theme');
+  if (value === 'system') html.setAttribute('data-theme', getSystemTheme());
   else html.setAttribute('data-theme', value);
 }
 
@@ -78,6 +90,12 @@ function App() {
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {}
+    if (theme === 'system') {
+      const m = window.matchMedia('(prefers-color-scheme: dark)');
+      const update = () => document.documentElement.setAttribute('data-theme', m.matches ? 'dark' : 'light');
+      m.addEventListener('change', update);
+      return () => m.removeEventListener('change', update);
+    }
   }, [theme]);
 
   const onServiceCall = useCallback(() => {
@@ -103,9 +121,9 @@ function App() {
               onChange={(e) => setTheme((e.target.value as ThemeValue))}
               className="theme-select"
             >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              {THEME_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
             <button
               type="button"

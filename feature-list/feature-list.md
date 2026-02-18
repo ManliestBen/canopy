@@ -32,8 +32,8 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [ ] **Backup** — create a backup of all settings (config, user list, theme, etc.)
 - [ ] **Restore** — restore from a backup
 - [ ] **Themes** (each with dark/light mode):
-  - [ ] Color scheme to match sample images (in this directory)
-  - [ ] Apple liquid glass–style
+  - [x] Color scheme to match sample images (in this directory)
+  - [x] Apple liquid glass–style
   - [ ] Bolder, more modern look
 
 ### Google Calendar (nav)

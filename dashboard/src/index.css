@@ -38,35 +38,124 @@
   }
 }
 
-/* Manual theme override (UI selector) */
+/* Manual theme override (UI selector) — liquid glass style for both */
 html[data-theme="light"] {
-  --bg: #f6f8fa;
-  --bg-card: #ffffff;
-  --bg-card-hover: #eaeef2;
-  --border: #d0d7de;
+  --bg: #e2eaf2;
+  --bg-card: rgba(255, 255, 255, 0.65);
+  --bg-card-hover: rgba(255, 255, 255, 0.85);
+  --border: rgba(255, 255, 255, 0.6);
   --text: #1e293b;
-  --text-muted: #57606a;
-  --accent: #0969da;
-  --accent-dim: #0969da33;
-  --on: #1a7f37;
-  --off: #6e7681;
-  --unavailable: #8b949e;
-  --danger: #cf222e;
+  --text-muted: #475569;
+  --accent: #0ea5e9;
+  --accent-dim: rgba(14, 165, 233, 0.25);
+  --on: #059669;
+  --off: #64748b;
+  --unavailable: #94a3b8;
+  --danger: #dc2626;
+}
+
+html[data-theme="light"] {
+  background: linear-gradient(165deg, #d4dce6 0%, #e8eef5 40%, #e2eaf2 100%);
 }
 
 html[data-theme="dark"] {
-  --bg: #0f1419;
-  --bg-card: #1a2332;
-  --bg-card-hover: #223044;
-  --border: #2d3a4d;
+  --bg: #0c111b;
+  --bg-card: rgba(26, 35, 50, 0.65);
+  --bg-card-hover: rgba(36, 48, 68, 0.85);
+  --border: rgba(255, 255, 255, 0.08);
   --text: #e6edf3;
   --text-muted: #8b9cb3;
   --accent: #58a6ff;
-  --accent-dim: #388bfd66;
+  --accent-dim: rgba(88, 166, 255, 0.2);
   --on: #3fb950;
   --off: #6e7681;
   --unavailable: #8b949e;
   --danger: #f85149;
+}
+
+html[data-theme="dark"] {
+  background: linear-gradient(165deg, #0a0f18 0%, #0f1624 35%, #141c2b 100%);
+}
+
+html[data-theme="light"] body,
+html[data-theme="dark"] body {
+  background: transparent;
+}
+
+/* Glass panels: translucent background + backdrop blur */
+[data-theme="light"] .app-header,
+[data-theme="light"] .tabs,
+[data-theme="light"] .card,
+[data-theme="light"] .event-detail-modal,
+[data-theme="light"] .calendar-time-grid-wrap,
+[data-theme="light"] .calendar-time-grid-header,
+[data-theme="light"] .calendar-header .calendar-calendars-btn,
+[data-theme="light"] .calendar-header .calendar-refresh,
+[data-theme="light"] .calendar-view-select,
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .tabs,
+[data-theme="dark"] .card,
+[data-theme="dark"] .event-detail-modal,
+[data-theme="dark"] .calendar-time-grid-wrap,
+[data-theme="dark"] .calendar-time-grid-header,
+[data-theme="dark"] .calendar-header .calendar-calendars-btn,
+[data-theme="dark"] .calendar-header .calendar-refresh,
+[data-theme="dark"] .calendar-view-select {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .tabs,
+[data-theme="dark"] .card,
+[data-theme="dark"] .event-detail-modal,
+[data-theme="dark"] .calendar-time-grid-wrap,
+[data-theme="dark"] .calendar-time-grid-header {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+/* Light theme: subtle inner highlight on borders */
+[data-theme="light"] .app-header,
+[data-theme="light"] .tabs,
+[data-theme="light"] .card,
+[data-theme="light"] .event-detail-modal,
+[data-theme="light"] .calendar-time-grid-wrap {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .tabs,
+[data-theme="dark"] .card,
+[data-theme="dark"] .event-detail-modal,
+[data-theme="dark"] .calendar-time-grid-wrap {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Theme select and header buttons: glass look */
+[data-theme="light"] .app-header .theme-select,
+[data-theme="light"] .app-header button {
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .app-header .theme-select,
+[data-theme="dark"] .app-header button {
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Theme dropdown readable in dark: strong light text on dark, options dark on white */
+[data-theme="dark"] .app-header .theme-select {
+  color: #f0f4f8;
+  background: #1a2332;
+}
+[data-theme="dark"] .app-header .theme-select option {
+  color: #1e293b;
+  background: #ffffff;
 }
 
 * {
