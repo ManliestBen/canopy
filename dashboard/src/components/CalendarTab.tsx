@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getCalendarEvents, getCalendarList, getSavedCalendars, addSavedCalendar, updateSavedCalendar, deleteSavedCalendar } from '../api';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { getCalendarEvents, getCalendarList, getSavedCalendars, addSavedCalendar, updateSavedCalendar, deleteSavedCalendar, getCalendarEvent, deleteCalendarEvent } from '../api';
 import type { CalendarEvent } from '../types';
 import type { SavedCalendar } from '../api';
+import { AddEventModal } from './AddEventModal';
+import { EditEventModal } from './EditEventModal';
 
 export type CalendarViewMode = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
@@ -20,16 +22,59 @@ const PASTEL_HEX = [
   '#FEF3C7', '#FED7AA', '#E2E8F0', '#FECDD3', '#D9F99D', '#BAE6FD', '#DDD6FE', '#F5D0FE', '#A5F3FC', '#A7F3D0',
 ];
 
+const CUSTOM_COLOR_VALUE = 'custom';
+const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
+
+const CALENDAR_ID_HELP = (
+  <>
+    To find your Google Calendar ID: open{' '}
+    <a href="https://calendar.google.com" target="_blank" rel="noopener noreferrer">Google Calendar</a>
+    {' '}on the web → click the three dots (⋮) next to the calendar in the left sidebar → <strong>Settings and sharing</strong> → scroll to <strong>Integrate calendar</strong> → copy the <strong>Calendar ID</strong>.
+  </>
+);
+
+function resolveCalendarColor(c: { colorIndex: number; colorHex?: string }): string {
+  if (c.colorHex && HEX_REGEX.test(c.colorHex)) return c.colorHex;
+  return PASTEL_HEX[c.colorIndex] ?? PASTEL_HEX[0];
+}
+
 function CalendarManagement({ savedCalendars, onRefresh }: { savedCalendars: SavedCalendar[]; onRefresh: () => void }) {
   const [addTitle, setAddTitle] = useState('');
   const [addCalendarId, setAddCalendarId] = useState('');
-  const [addColorIndex, setAddColorIndex] = useState(0);
+  const [addColorValue, setAddColorValue] = useState<string | number>(0);
+  const [addCustomHex, setAddCustomHex] = useState('#888888');
+  const [addColorPickerOpen, setAddColorPickerOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editCalendarId, setEditCalendarId] = useState('');
-  const [editColorIndex, setEditColorIndex] = useState(0);
+  const [editColorValue, setEditColorValue] = useState<string | number>(0);
+  const [editCustomHex, setEditCustomHex] = useState('#888888');
+  const [editColorPickerOpen, setEditColorPickerOpen] = useState(false);
+  const [addCalendarIdHelpOpen, setAddCalendarIdHelpOpen] = useState(false);
+  const [editCalendarIdHelpOpen, setEditCalendarIdHelpOpen] = useState(false);
+  const addColorPickerRef = useRef<HTMLDivElement>(null);
+  const editColorPickerRef = useRef<HTMLDivElement>(null);
+  const addCalendarIdHelpRef = useRef<HTMLDivElement>(null);
+  const editCalendarIdHelpRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (addColorPickerOpen && addColorPickerRef.current && !addColorPickerRef.current.contains(target)) setAddColorPickerOpen(false);
+      if (editColorPickerOpen && editColorPickerRef.current && !editColorPickerRef.current.contains(target)) setEditColorPickerOpen(false);
+      if (addCalendarIdHelpOpen && addCalendarIdHelpRef.current && !addCalendarIdHelpRef.current.contains(target)) setAddCalendarIdHelpOpen(false);
+      if (editCalendarIdHelpOpen && editCalendarIdHelpRef.current && !editCalendarIdHelpRef.current.contains(target)) setEditCalendarIdHelpOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [addColorPickerOpen, editColorPickerOpen, addCalendarIdHelpOpen, editCalendarIdHelpOpen]);
+
+  const addColorIndex = addColorValue === CUSTOM_COLOR_VALUE ? 0 : Number(addColorValue);
+  const addResolvedHex = addColorValue === CUSTOM_COLOR_VALUE ? (HEX_REGEX.test(addCustomHex) ? addCustomHex : PASTEL_HEX[0]) : (PASTEL_HEX[addColorIndex] ?? PASTEL_HEX[0]);
+  const editColorIndex = editColorValue === CUSTOM_COLOR_VALUE ? 0 : Number(editColorValue);
+  const editResolvedHex = editColorValue === CUSTOM_COLOR_VALUE ? (HEX_REGEX.test(editCustomHex) ? editCustomHex : PASTEL_HEX[0]) : (PASTEL_HEX[editColorIndex] ?? PASTEL_HEX[0]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +85,22 @@ function CalendarManagement({ savedCalendars, onRefresh }: { savedCalendars: Sav
       setAddError('Title and Calendar ID are required');
       return;
     }
+    if (addColorValue === CUSTOM_COLOR_VALUE && !HEX_REGEX.test(addCustomHex)) {
+      setAddError('Custom color must be a valid 6-digit hex (e.g. #ff0000)');
+      return;
+    }
     setAdding(true);
     try {
-      await addSavedCalendar({ title, calendarId, colorIndex: addColorIndex });
+      await addSavedCalendar({
+        title,
+        calendarId,
+        colorIndex: addColorIndex,
+        colorHex: addColorValue === CUSTOM_COLOR_VALUE ? addCustomHex : undefined,
+      });
       setAddTitle('');
       setAddCalendarId('');
-      setAddColorIndex(0);
+      setAddColorValue(0);
+      setAddCustomHex('#888888');
       onRefresh();
     } catch (err) {
       setAddError((err as Error).message);
@@ -58,17 +113,33 @@ function CalendarManagement({ savedCalendars, onRefresh }: { savedCalendars: Sav
     setEditingId(c.id);
     setEditTitle(c.title);
     setEditCalendarId(c.calendarId);
-    setEditColorIndex(c.colorIndex);
+    setEditColorValue(c.colorHex ? CUSTOM_COLOR_VALUE : c.colorIndex);
+    setEditCustomHex(c.colorHex && HEX_REGEX.test(c.colorHex) ? c.colorHex : '#888888');
+    setEditColorPickerOpen(false);
   };
 
-  const cancelEdit = () => setEditingId(null);
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditColorPickerOpen(false);
+    setEditCalendarIdHelpOpen(false);
+  };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId == null) return;
+    if (editColorValue === CUSTOM_COLOR_VALUE && !HEX_REGEX.test(editCustomHex)) {
+      setAddError('Custom color must be a valid 6-digit hex (e.g. #ff0000)');
+      return;
+    }
     try {
-      await updateSavedCalendar(editingId, { title: editTitle.trim(), calendarId: editCalendarId.trim(), colorIndex: editColorIndex });
+      await updateSavedCalendar(editingId, {
+        title: editTitle.trim(),
+        calendarId: editCalendarId.trim(),
+        colorIndex: editColorIndex,
+        colorHex: editColorValue === CUSTOM_COLOR_VALUE ? editCustomHex : null,
+      });
       setEditingId(null);
+      setEditColorPickerOpen(false);
       onRefresh();
     } catch (err) {
       setAddError((err as Error).message);
@@ -90,36 +161,94 @@ function CalendarManagement({ savedCalendars, onRefresh }: { savedCalendars: Sav
     <section className="calendar-management" aria-label="Calendar list">
       <form className="calendar-management-form" onSubmit={handleAdd}>
         <div className="calendar-management-fields">
-          <div className="calendar-management-input-row">
+          <div className="calendar-management-title-color-row">
+            <label className="calendar-management-field calendar-management-title-field">
+              <span className="calendar-management-label">Title</span>
+              <input
+                type="text"
+                placeholder="e.g. Holidays"
+                value={addTitle}
+                onChange={(e) => setAddTitle(e.target.value)}
+                className="calendar-management-input"
+                aria-label="Calendar title"
+              />
+            </label>
+            <div className="calendar-management-field calendar-management-color-field">
+              <span className="calendar-management-label">Color</span>
+              <div className="calendar-management-color-picker-wrap" ref={addColorPickerRef}>
+                <button
+                  type="button"
+                  className="calendar-management-color-preview calendar-management-color-preview-btn"
+                  style={{ background: addResolvedHex }}
+                  onClick={() => setAddColorPickerOpen((o) => !o)}
+                  aria-label="Choose color"
+                  aria-expanded={addColorPickerOpen}
+                />
+                {addColorPickerOpen && (
+                  <div className="calendar-management-color-popover" role="listbox" aria-label="Color options">
+                    {PASTEL_HEX.map((hex, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        role="option"
+                        aria-selected={addColorValue === i}
+                        className={`calendar-management-swatch${addColorValue === i ? ' is-selected' : ''}`}
+                        style={{ background: hex }}
+                        title={`Color ${i + 1}`}
+                        onClick={() => { setAddColorValue(i); setAddColorPickerOpen(false); }}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={addColorValue === CUSTOM_COLOR_VALUE}
+                      className={`calendar-management-swatch calendar-management-swatch-custom${addColorValue === CUSTOM_COLOR_VALUE ? ' is-selected' : ''}`}
+                      onClick={() => { setAddColorValue(CUSTOM_COLOR_VALUE); setAddColorPickerOpen(false); }}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                )}
+                {addColorValue === CUSTOM_COLOR_VALUE && (
+                  <input
+                    type="text"
+                    value={addCustomHex}
+                    onChange={(e) => setAddCustomHex(e.target.value)}
+                    placeholder="#000000"
+                    className="calendar-management-hex-input"
+                    aria-label="Custom hex color"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+          <label className="calendar-management-field">
+            <div className="calendar-management-label-row" ref={addCalendarIdHelpRef}>
+              <span className="calendar-management-label">Calendar ID</span>
+              <button
+                type="button"
+                className="calendar-management-help-btn"
+                onClick={(e) => { e.preventDefault(); setAddCalendarIdHelpOpen((o) => !o); }}
+                aria-label="Where to find Calendar ID"
+                aria-expanded={addCalendarIdHelpOpen}
+              >
+                ?
+              </button>
+              {addCalendarIdHelpOpen && (
+                <div className="calendar-management-help-popover" role="tooltip">
+                  {CALENDAR_ID_HELP}
+                </div>
+              )}
+            </div>
             <input
               type="text"
-              placeholder="Title (e.g. Holidays)"
-              value={addTitle}
-              onChange={(e) => setAddTitle(e.target.value)}
-              className="calendar-management-input"
-              aria-label="Calendar title"
-            />
-            <input
-              type="text"
-              placeholder="Calendar ID (e.g. usa#holiday@group.v.calendar.google.com)"
+              placeholder="e.g. usa#holiday@group.v.calendar.google.com"
               value={addCalendarId}
               onChange={(e) => setAddCalendarId(e.target.value)}
-              className="calendar-management-input calendar-management-input-id"
+              className="calendar-management-input"
               aria-label="Calendar ID"
             />
-          </div>
-          <div className="calendar-management-colors" role="group" aria-label="Color">
-            {PASTEL_HEX.map((hex, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`calendar-management-swatch${addColorIndex === i ? ' is-selected' : ''}`}
-                style={{ background: hex }}
-                title={`Color ${i + 1}`}
-                onClick={() => setAddColorIndex(i)}
-              />
-            ))}
-          </div>
+          </label>
           <button type="submit" className="calendar-management-submit" disabled={adding}>
             {adding ? 'Adding…' : 'Add calendar'}
           </button>
@@ -131,39 +260,99 @@ function CalendarManagement({ savedCalendars, onRefresh }: { savedCalendars: Sav
           <li key={c.id} className="calendar-management-item">
             {editingId === c.id ? (
               <form className="calendar-management-edit-form" onSubmit={handleUpdate}>
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="calendar-management-input"
-                  placeholder="Title"
-                />
-                <input
-                  type="text"
-                  value={editCalendarId}
-                  onChange={(e) => setEditCalendarId(e.target.value)}
-                  className="calendar-management-input calendar-management-input-id"
-                  placeholder="Calendar ID"
-                />
-                <div className="calendar-management-colors" role="group" aria-label="Color">
-                  {PASTEL_HEX.map((hex, i) => (
+                <label className="calendar-management-field">
+                  <span className="calendar-management-label">Title</span>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="calendar-management-input"
+                    placeholder="Title"
+                  />
+                </label>
+                <label className="calendar-management-field">
+                  <div className="calendar-management-label-row" ref={editCalendarIdHelpRef}>
+                    <span className="calendar-management-label">Calendar ID</span>
                     <button
-                      key={i}
                       type="button"
-                      className={`calendar-management-swatch${editColorIndex === i ? ' is-selected' : ''}`}
-                      style={{ background: hex }}
-                      onClick={() => setEditColorIndex(i)}
+                      className="calendar-management-help-btn"
+                      onClick={(e) => { e.preventDefault(); setEditCalendarIdHelpOpen((o) => !o); }}
+                      aria-label="Where to find Calendar ID"
+                      aria-expanded={editCalendarIdHelpOpen}
+                    >
+                      ?
+                    </button>
+                    {editCalendarIdHelpOpen && (
+                      <div className="calendar-management-help-popover" role="tooltip">
+                        {CALENDAR_ID_HELP}
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={editCalendarId}
+                    onChange={(e) => setEditCalendarId(e.target.value)}
+                    className="calendar-management-input"
+                    placeholder="Calendar ID"
+                  />
+                </label>
+                <div className="calendar-management-field calendar-management-color-field">
+                  <span className="calendar-management-label">Color</span>
+                  <div className="calendar-management-color-picker-wrap" ref={editColorPickerRef}>
+                    <button
+                      type="button"
+                      className="calendar-management-color-preview calendar-management-color-preview-btn"
+                      style={{ background: editResolvedHex }}
+                      onClick={() => setEditColorPickerOpen((o) => !o)}
+                      aria-label="Choose color"
+                      aria-expanded={editColorPickerOpen}
                     />
-                  ))}
+                    {editColorPickerOpen && (
+                      <div className="calendar-management-color-popover" role="listbox" aria-label="Color options">
+                        {PASTEL_HEX.map((hex, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            role="option"
+                            aria-selected={editColorValue === i}
+                            className={`calendar-management-swatch${editColorValue === i ? ' is-selected' : ''}`}
+                            style={{ background: hex }}
+                            title={`Color ${i + 1}`}
+                            onClick={() => { setEditColorValue(i); setEditColorPickerOpen(false); }}
+                          />
+                        ))}
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={editColorValue === CUSTOM_COLOR_VALUE}
+                          className={`calendar-management-swatch calendar-management-swatch-custom${editColorValue === CUSTOM_COLOR_VALUE ? ' is-selected' : ''}`}
+                          onClick={() => { setEditColorValue(CUSTOM_COLOR_VALUE); setEditColorPickerOpen(false); }}
+                        >
+                          Custom
+                        </button>
+                      </div>
+                    )}
+                    {editColorValue === CUSTOM_COLOR_VALUE && (
+                      <input
+                        type="text"
+                        value={editCustomHex}
+                        onChange={(e) => setEditCustomHex(e.target.value)}
+                        placeholder="#000000"
+                        className="calendar-management-hex-input"
+                        aria-label="Custom hex color"
+                      />
+                    )}
+                  </div>
                 </div>
-                <button type="submit" className="calendar-management-submit">Save</button>
-                <button type="button" onClick={cancelEdit}>Cancel</button>
+                <div className="calendar-management-edit-actions">
+                  <button type="submit" className="calendar-management-submit">Save</button>
+                  <button type="button" onClick={cancelEdit}>Cancel</button>
+                </div>
               </form>
             ) : (
               <>
-                <span className="calendar-management-swatch calendar-management-swatch-inline" style={{ background: PASTEL_HEX[c.colorIndex] ?? PASTEL_HEX[0] }} />
+                <span className="calendar-management-swatch calendar-management-swatch-inline" style={{ background: resolveCalendarColor(c) }} />
                 <span className="calendar-management-item-title">{c.title}</span>
-                <code className="calendar-management-item-id" title={c.calendarId}>{c.calendarId.length > 35 ? `${c.calendarId.slice(0, 32)}…` : c.calendarId}</code>
                 <span className="calendar-management-item-actions">
                   <button type="button" className="calendar-management-btn" onClick={() => startEdit(c)}>Edit</button>
                   <button type="button" className="calendar-management-btn calendar-management-btn-danger" onClick={() => handleDelete(c.id)}>Remove</button>
@@ -307,22 +496,57 @@ function formatEventDate(ev: CalendarEvent): string {
   return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+function DeleteConfirmModal({
+  event,
+  onConfirm,
+  onCancel,
+}: {
+  event: CalendarEvent;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const title = event.summary || '(No title)';
+  return (
+    <div
+      className="event-detail-modal-backdrop delete-confirm-backdrop"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-confirm-title"
+    >
+      <div className="event-detail-modal delete-confirm-modal" style={{ maxWidth: '22rem' }}>
+        <h2 id="delete-confirm-title" className="event-detail-title" style={{ marginBottom: '0.75rem' }}>Delete this event?</h2>
+        <p className="delete-confirm-message">“{title}” will be removed from the calendar.</p>
+        <div className="event-detail-modal-actions delete-confirm-actions">
+          <button type="button" onClick={onCancel} className="add-event-btn add-event-btn-secondary">Cancel</button>
+          <button type="button" onClick={onConfirm} className="add-event-btn add-event-btn-primary add-event-btn-danger">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EventDetailModal({
   event,
   calendarSummaries,
   calendarList,
   onClose,
+  onRequestDelete,
+  onEdit,
 }: {
   event: CalendarEvent;
-  /** Map of calendar ID → title from API (includes public calendars like Holidays) */
   calendarSummaries: Record<string, string>;
   calendarList: { id: string; summary?: string }[];
   onClose: () => void;
+  onRequestDelete?: (ev: CalendarEvent) => void;
+  onEdit?: (ev: CalendarEvent) => void;
 }) {
   const title = event.summary || '(No title)';
   const eventCalendarName = event.calendarId
     ? (calendarSummaries[event.calendarId] ?? calendarList.find((c) => c.id === event.calendarId)?.summary ?? event.calendarId)
     : null;
+  const canModify = event.id && event.calendarId;
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -363,6 +587,18 @@ function EventDetailModal({
           )}
         </div>
         <div className="event-detail-modal-actions">
+          <div className="event-detail-modal-actions-left">
+            {canModify && onEdit && (
+              <button type="button" onClick={() => onEdit(event)} className="add-event-btn add-event-btn-primary">
+                Edit
+              </button>
+            )}
+            {canModify && onRequestDelete && (
+              <button type="button" onClick={() => onRequestDelete(event)} className="add-event-btn add-event-btn-secondary">
+                Delete
+              </button>
+            )}
+          </div>
           {event.htmlLink && (
             <a
               href={event.htmlLink}
@@ -382,11 +618,13 @@ function EventDetailModal({
 function CalendarEventCard({
   event,
   pastelClass,
+  backgroundColor,
   isContinuation,
   onSelect,
 }: {
   event: CalendarEvent;
   pastelClass: string;
+  backgroundColor?: string;
   isContinuation: boolean;
   onSelect?: (ev: CalendarEvent) => void;
 }) {
@@ -394,6 +632,7 @@ function CalendarEventCard({
   return (
     <div
       className={pastelClass}
+      style={backgroundColor ? { backgroundColor } : undefined}
       role="button"
       tabIndex={0}
       onClick={() => onSelect?.(event)}
@@ -419,7 +658,10 @@ export function CalendarTab() {
   const [viewMode, setViewMode] = useState<CalendarViewMode>('biweekly');
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => dateToKey(new Date()));
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarsModalOpen, setCalendarsModalOpen] = useState(false);
+  const [addEventModalOpen, setAddEventModalOpen] = useState(false);
 
   const load = async () => {
     setError(null);
@@ -481,6 +723,13 @@ export function CalendarTab() {
   }, [events]);
 
   const calendarColorMap = useMemo(() => buildCalendarColorMap(events, calendarColors), [events, calendarColors]);
+  const calendarCustomHexMap = useMemo(() => {
+    const m = new Map<string, string>();
+    savedCalendars.forEach((c) => {
+      if (c.colorHex && HEX_REGEX.test(c.colorHex)) m.set(c.calendarId, c.colorHex);
+    });
+    return m;
+  }, [savedCalendars]);
 
   const todayKey = dateToKey(new Date());
 
@@ -565,9 +814,10 @@ export function CalendarTab() {
           ) : (
             dayEvents.map((ev, i) => (
               <CalendarEventCard
-                key={`${key}-${ev.id ?? i}`}
+                key={`${key}-${ev.id ?? 'e'}-${i}`}
                 event={ev}
                 pastelClass={getPastelClass(ev.calendarId, calendarColorMap.get(ev.calendarId ?? '') ?? 0)}
+                backgroundColor={ev.calendarId ? calendarCustomHexMap.get(ev.calendarId) : undefined}
                 isContinuation={key !== getEventDateKey(ev)}
                 onSelect={setSelectedEvent}
               />
@@ -611,11 +861,16 @@ export function CalendarTab() {
             <div key={d.key} className="day-slot">
               {allDayByDay[colIdx].map((ev, i) => (
                 <div
-                  key={ev.id ?? i}
+                  key={`${d.key}-${ev.id ?? 'e'}-${i}`}
                   role="button"
                   tabIndex={0}
                   className={`calendar-clickable-event ${getPastelClass(ev.calendarId, calendarColorMap.get(ev.calendarId ?? '') ?? 0)}`}
-                  style={{ padding: '0.35rem 0.5rem', borderRadius: 8, fontSize: '0.75rem' }}
+                  style={{
+                    padding: '0.35rem 0.5rem',
+                    borderRadius: 8,
+                    fontSize: '0.75rem',
+                    ...(ev.calendarId ? (calendarCustomHexMap.get(ev.calendarId) ? { backgroundColor: calendarCustomHexMap.get(ev.calendarId) } : {}) : {}),
+                  }}
                   onClick={() => setSelectedEvent(ev)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEvent(ev); } }}
                 >
@@ -645,9 +900,10 @@ export function CalendarTab() {
                   .map((ev, i) => {
                     const pos = getTimeGridPosition(ev, gridStartHour, gridEndHour);
                     const pastel = getPastelClass(ev.calendarId, calendarColorMap.get(ev.calendarId ?? '') ?? 0).replace('calendar-event-card ', '');
+                    const customHex = ev.calendarId ? calendarCustomHexMap.get(ev.calendarId) : undefined;
                     return (
                       <div
-                        key={ev.id ?? `${d.key}-${i}`}
+                        key={`${d.key}-${ev.id ?? 'e'}-${i}`}
                         role="button"
                         tabIndex={0}
                         className={`calendar-time-grid-event calendar-clickable-event ${pastel}`}
@@ -655,6 +911,7 @@ export function CalendarTab() {
                           top: `${pos.topPct}%`,
                           height: `${pos.heightPct}%`,
                           minHeight: 24,
+                          ...(customHex ? { backgroundColor: customHex } : {}),
                         }}
                         onClick={() => setSelectedEvent(ev)}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEvent(ev); } }}
@@ -698,17 +955,69 @@ export function CalendarTab() {
           calendarSummaries={calendarSummaries}
           calendarList={calendarList}
           onClose={() => setSelectedEvent(null)}
+          onRequestDelete={(ev) => setEventToDelete(ev)}
+          onEdit={async (ev) => {
+            if (!ev.calendarId || !ev.id) return;
+            try {
+              const full = await getCalendarEvent(ev.calendarId, ev.id);
+              setEditingEvent(full);
+              setSelectedEvent(null);
+            } catch (_) {
+              // leave detail open on error
+            }
+          }}
+        />
+      )}
+      {editingEvent && editingEvent.calendarId && editingEvent.id && (
+        <EditEventModal
+          calendarId={editingEvent.calendarId}
+          eventId={editingEvent.id}
+          savedCalendars={savedCalendars}
+          initialEvent={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={() => load()}
+        />
+      )}
+      {eventToDelete && (
+        <DeleteConfirmModal
+          event={eventToDelete}
+          onConfirm={async () => {
+            if (!eventToDelete.calendarId || !eventToDelete.id) return;
+            await deleteCalendarEvent(eventToDelete.calendarId, eventToDelete.id);
+            await load();
+            setEventToDelete(null);
+            setSelectedEvent(null);
+          }}
+          onCancel={() => setEventToDelete(null)}
+        />
+      )}
+      {addEventModalOpen && savedCalendars.length > 0 && (
+        <AddEventModal
+          savedCalendars={savedCalendars}
+          onClose={() => setAddEventModalOpen(false)}
+          onSuccess={() => load()}
         />
       )}
       <div className="calendar-header">
-        <button
-          type="button"
-          className="calendar-calendars-btn"
-          onClick={() => setCalendarsModalOpen(true)}
-          aria-label="Manage calendars"
-        >
-          Calendars
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="calendar-calendars-btn"
+            onClick={() => setCalendarsModalOpen(true)}
+            aria-label="Manage calendars"
+          >
+            Calendars
+          </button>
+          <button
+            type="button"
+            className="calendar-calendars-btn calendar-add-event-btn"
+            onClick={() => (savedCalendars.length > 0 ? setAddEventModalOpen(true) : setCalendarsModalOpen(true))}
+            aria-label="Add event"
+            title={savedCalendars.length === 0 ? 'Add a calendar first' : undefined}
+          >
+            Add Event
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <select
             className="calendar-view-select"

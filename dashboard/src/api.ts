@@ -65,6 +65,8 @@ export interface SavedCalendar {
   title: string;
   calendarId: string;
   colorIndex: number;
+  /** Custom hex color (e.g. #ff0000); when set, overrides pastel from colorIndex. */
+  colorHex?: string;
 }
 
 export async function getSavedCalendars(): Promise<SavedCalendar[]> {
@@ -74,7 +76,7 @@ export async function getSavedCalendars(): Promise<SavedCalendar[]> {
   return Array.isArray(data) ? data : [];
 }
 
-export async function addSavedCalendar(body: { title: string; calendarId: string; colorIndex?: number }): Promise<SavedCalendar> {
+export async function addSavedCalendar(body: { title: string; calendarId: string; colorIndex?: number; colorHex?: string }): Promise<SavedCalendar> {
   const res = await fetch('/calendar-api/saved-calendars', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -85,7 +87,7 @@ export async function addSavedCalendar(body: { title: string; calendarId: string
   return data as SavedCalendar;
 }
 
-export async function updateSavedCalendar(id: number, updates: { title?: string; calendarId?: string; colorIndex?: number }): Promise<SavedCalendar> {
+export async function updateSavedCalendar(id: number, updates: { title?: string; calendarId?: string; colorIndex?: number; colorHex?: string | null }): Promise<SavedCalendar> {
   const res = await fetch(`/calendar-api/saved-calendars/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -148,4 +150,71 @@ export async function getCalendarDiagnose(
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || `Diagnose: ${res.status}`);
   return data as { list?: { ok: boolean }; direct?: { ok: boolean; error?: string; status?: number; code?: number } };
+}
+
+/** Payload for creating a calendar event (POST /calendar-api/events). */
+export interface CreateCalendarEventPayload {
+  calendarId: string;
+  summary: string;
+  date: string;
+  allDay: boolean;
+  startTime?: string;
+  endTime?: string;
+  /** IANA timezone (e.g. America/Chicago) so times are stored in user's local time. */
+  timeZone?: string;
+  location?: string;
+  description?: string;
+  recurrence?: string[];
+  reminders?: { overrides: { method: 'email' | 'popup'; minutes: number }[] };
+  attendees?: string[];
+}
+
+/** Create an event on a calendar. Returns the created event. */
+export async function createCalendarEvent(payload: CreateCalendarEventPayload): Promise<{ id: string; htmlLink?: string }> {
+  const res = await fetch('/calendar-api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to create event');
+  return data as { id: string; htmlLink?: string };
+}
+
+/** Get a single event (full details for edit). */
+export async function getCalendarEvent(calendarId: string, eventId: string): Promise<CalendarEvent> {
+  const res = await fetch(`/calendar-api/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to load event');
+  return data as CalendarEvent;
+}
+
+/** Delete an event. */
+export async function deleteCalendarEvent(calendarId: string, eventId: string): Promise<void> {
+  const res = await fetch(`/calendar-api/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error || 'Failed to delete event');
+  }
+}
+
+/** Update payload (same shape as create; calendarId/eventId in URL). */
+export type UpdateCalendarEventPayload = Omit<CreateCalendarEventPayload, 'calendarId'>;
+
+/** Update an event. */
+export async function updateCalendarEvent(
+  calendarId: string,
+  eventId: string,
+  payload: UpdateCalendarEventPayload
+): Promise<{ id: string; htmlLink?: string }> {
+  const res = await fetch(`/calendar-api/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to update event');
+  return data as { id: string; htmlLink?: string };
 }

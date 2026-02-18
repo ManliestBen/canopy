@@ -10,7 +10,10 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar',
+];
 
 function loadKey() {
   const keyPath = path.join(__dirname, '..', 'SERVICE_ACCOUNT.json');
@@ -150,4 +153,129 @@ export async function getCalendarSummary(calendarId) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Create an event on a calendar.
+ * @param {string} calendarId - Calendar ID
+ * @param {object} event - Event payload: summary, start, end, allDay?, location?, description?, recurrence?, reminders?, attendees?
+ *   start/end: { dateTime: ISO } for timed, or { date: 'YYYY-MM-DD' } for all-day
+ *   recurrence: string[] (RRULE lines, e.g. ['RRULE:FREQ=WEEKLY;BYDAY=SU'])
+ *   reminders: { overrides: [{ method: 'email'|'popup', minutes: number }] }
+ *   attendees: [{ email: string }]
+ * @param {object} options - { sendUpdates?: 'none'|'externalOnly'|'all' }
+ * @returns {Promise<object>} Created event (id, htmlLink, ...)
+ */
+export async function insertEvent(calendarId, event, options = {}) {
+  const auth = getAuthClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const body = {
+    summary: event.summary || '',
+    location: event.location || undefined,
+    description: event.description || undefined,
+    start: event.start,
+    end: event.end,
+    recurrence: event.recurrence?.length ? event.recurrence : undefined,
+    attendees: event.attendees?.length ? event.attendees.map((a) => (typeof a === 'string' ? { email: a } : { email: a.email })) : undefined,
+    reminders: event.reminders
+      ? {
+          useDefault: false,
+          overrides: event.reminders.overrides || [],
+        }
+      : undefined,
+  };
+
+  const res = await calendar.events.insert({
+    calendarId,
+    requestBody: body,
+    sendUpdates: options.sendUpdates || 'none',
+  });
+
+  return res.data;
+}
+
+/**
+ * Get a single event by ID.
+ * @param {string} calendarId - Calendar ID
+ * @param {string} eventId - Event ID
+ * @returns {Promise<object|null>} Event object or null if not found
+ */
+export async function getEvent(calendarId, eventId) {
+  if (!calendarId || !eventId) return null;
+  try {
+    const auth = getAuthClient();
+    const calendar = google.calendar({ version: 'v3', auth });
+    const res = await calendar.events.get({ calendarId, eventId });
+    const ev = res.data;
+    return {
+      id: ev.id,
+      summary: ev.summary || '(No title)',
+      start: ev.start?.dateTime || ev.start?.date,
+      end: ev.end?.dateTime || ev.end?.date,
+      allDay: !ev.start?.dateTime,
+      location: ev.location,
+      description: ev.description,
+      htmlLink: ev.htmlLink,
+      recurrence: ev.recurrence || undefined,
+      attendees: ev.attendees?.map((a) => a.email).filter(Boolean) || undefined,
+      reminders: ev.reminders?.overrides?.length
+        ? { overrides: ev.reminders.overrides }
+        : undefined,
+      calendarId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Delete an event.
+ * @param {string} calendarId - Calendar ID
+ * @param {string} eventId - Event ID
+ * @param {object} options - { sendUpdates?: 'none'|'externalOnly'|'all' }
+ */
+export async function deleteEvent(calendarId, eventId, options = {}) {
+  const auth = getAuthClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+  await calendar.events.delete({
+    calendarId,
+    eventId,
+    sendUpdates: options.sendUpdates || 'all',
+  });
+}
+
+/**
+ * Update an event (patch).
+ * @param {string} calendarId - Calendar ID
+ * @param {string} eventId - Event ID
+ * @param {object} event - Same shape as insertEvent (summary, start, end, ...)
+ * @param {object} options - { sendUpdates?: 'none'|'externalOnly'|'all' }
+ * @returns {Promise<object>} Updated event
+ */
+export async function updateEvent(calendarId, eventId, event, options = {}) {
+  const auth = getAuthClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const body = {
+    summary: event.summary ?? '',
+    location: event.location ?? undefined,
+    description: event.description ?? undefined,
+    start: event.start,
+    end: event.end,
+    recurrence: event.recurrence?.length ? event.recurrence : undefined,
+    attendees: event.attendees?.length ? event.attendees.map((a) => (typeof a === 'string' ? { email: a } : { email: a.email })) : undefined,
+    reminders: event.reminders?.overrides?.length
+      ? { useDefault: false, overrides: event.reminders.overrides }
+      : undefined,
+  };
+
+  const res = await calendar.events.patch({
+    calendarId,
+    eventId,
+    requestBody: body,
+    sendUpdates: options.sendUpdates || 'all',
+  });
+
+  return res.data;
 }

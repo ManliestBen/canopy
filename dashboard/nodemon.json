@@ -1,0 +1,6 @@
+{
+  "watch": ["lib", "calendar-server.js", "server.js"],
+  "ignore": ["node_modules", "src", "dist", "*.config.js", "vite.config.js"],
+  "ext": "js,json",
+  "delay": "300"
+}

@@ -14,7 +14,7 @@ import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getUpcomingEvents, getUpcomingEventsFromCalendars, listCalendars, getCalendarSummary, getServiceAccountEmail } from './lib/calendar.js';
+import { getUpcomingEvents, getUpcomingEventsFromCalendars, listCalendars, getCalendarSummary, getServiceAccountEmail, insertEvent, getEvent, deleteEvent, updateEvent } from './lib/calendar.js';
 import { getSavedCalendars, addSavedCalendar, updateSavedCalendar, deleteSavedCalendar } from './lib/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -45,12 +45,12 @@ app.get('/calendar-api/saved-calendars', (req, res) => {
 
 app.post('/calendar-api/saved-calendars', (req, res) => {
   try {
-    const { title, calendarId, colorIndex } = req.body || {};
+    const { title, calendarId, colorIndex, colorHex } = req.body || {};
     if (!title || !calendarId) {
       res.status(400).json({ error: 'title and calendarId are required' });
       return;
     }
-    const row = addSavedCalendar({ title, calendarId: String(calendarId).trim(), colorIndex: colorIndex ?? 0 });
+    const row = addSavedCalendar({ title, calendarId: String(calendarId).trim(), colorIndex: colorIndex ?? 0, colorHex });
     res.status(201).json(row);
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -140,6 +140,146 @@ app.get('/calendar-api/diagnose', async (req, res) => {
     }
   }
   res.json(out);
+});
+
+app.post('/calendar-api/events', async (req, res) => {
+  try {
+    const {
+      calendarId,
+      summary,
+      date,
+      allDay,
+      startTime,
+      endTime,
+      timeZone,
+      location,
+      description,
+      recurrence,
+      reminders,
+      attendees,
+    } = req.body || {};
+
+    if (!calendarId || !date) {
+      res.status(400).json({ error: 'calendarId and date are required' });
+      return;
+    }
+
+    const dateStr = date.slice(0, 10);
+    const tz = (typeof timeZone === 'string' && timeZone.trim()) ? timeZone.trim() : 'UTC';
+    let start;
+    let end;
+
+    if (allDay) {
+      start = { date: dateStr };
+      const d = new Date(dateStr + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() + 1);
+      end = { date: d.toISOString().slice(0, 10) };
+    } else {
+      const st = startTime || '09:00';
+      const et = endTime || '10:00';
+      start = { dateTime: dateStr + 'T' + st + ':00', timeZone: tz };
+      end = { dateTime: dateStr + 'T' + et + ':00', timeZone: tz };
+    }
+
+    const event = {
+      summary: summary || '(No title)',
+      start,
+      end,
+      location: location || undefined,
+      description: description || undefined,
+      recurrence: Array.isArray(recurrence) && recurrence.length ? recurrence : undefined,
+      reminders:
+        reminders?.overrides?.length ?
+          { useDefault: false, overrides: reminders.overrides } :
+          undefined,
+      attendees: Array.isArray(attendees) && attendees.length ? attendees.map((e) => ({ email: e })) : undefined,
+    };
+
+    const created = await insertEvent(calendarId, event, { sendUpdates: 'all' });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('Create event error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/calendar-api/calendars/:calendarId/events/:eventId', async (req, res) => {
+  try {
+    const { calendarId, eventId } = req.params;
+    const ev = await getEvent(calendarId, eventId);
+    if (!ev) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+    res.json(ev);
+  } catch (err) {
+    console.error('Get event error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/calendar-api/calendars/:calendarId/events/:eventId', async (req, res) => {
+  try {
+    const { calendarId, eventId } = req.params;
+    await deleteEvent(calendarId, eventId, { sendUpdates: 'all' });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Delete event error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function buildEventStartEnd(body) {
+  const { date, startTime, endTime, timeZone } = body;
+  const allDay = body.allDay === true || body.allDay === 'true';
+  const dateStr = (date || '').slice(0, 10);
+  if (!dateStr || !DATE_ONLY_REGEX.test(dateStr)) {
+    const err = new Error(allDay ? 'Date is required for all-day events (use YYYY-MM-DD).' : 'Date is required (use YYYY-MM-DD).');
+    err.statusCode = 400;
+    throw err;
+  }
+  const tz = (typeof timeZone === 'string' && timeZone.trim()) ? timeZone.trim() : 'UTC';
+  if (allDay) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    const endDateStr = d.toISOString().slice(0, 10);
+    // Clear dateTime/timeZone so PATCH removes existing timed fields (avoids "Invalid start time")
+    const start = { date: dateStr, dateTime: null, timeZone: null };
+    const end = { date: endDateStr, dateTime: null, timeZone: null };
+    return { start, end };
+  }
+  const st = startTime || '09:00';
+  const et = endTime || '10:00';
+  return {
+    start: { dateTime: dateStr + 'T' + st + ':00', timeZone: tz },
+    end: { dateTime: dateStr + 'T' + et + ':00', timeZone: tz },
+  };
+}
+
+app.patch('/calendar-api/calendars/:calendarId/events/:eventId', async (req, res) => {
+  try {
+    const { calendarId, eventId } = req.params;
+    const body = req.body || {};
+    const { start, end } = buildEventStartEnd(body);
+    const event = {
+      summary: body.summary ?? '',
+      start,
+      end,
+      location: body.location ?? undefined,
+      description: body.description ?? undefined,
+      recurrence: Array.isArray(body.recurrence) && body.recurrence.length ? body.recurrence : undefined,
+      reminders: body.reminders?.overrides?.length ? { useDefault: false, overrides: body.reminders.overrides } : undefined,
+      attendees: Array.isArray(body.attendees) && body.attendees.length ? body.attendees.map((e) => ({ email: typeof e === 'string' ? e : e.email })) : undefined,
+    };
+    const updated = await updateEvent(calendarId, eventId, event, { sendUpdates: 'all' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Update event error:', err.message);
+    const status = err.statusCode === 400 ? 400 : 500;
+    res.status(status).json({ error: err.message });
+  }
 });
 
 app.get('/calendar-api/events', async (req, res) => {

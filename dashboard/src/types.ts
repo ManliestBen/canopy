@@ -33,6 +33,12 @@ export interface CalendarEvent {
   description?: string;
   htmlLink?: string;
   calendarId?: string;
+  /** From getEvent (full event); RRULE strings */
+  recurrence?: string[];
+  /** From getEvent; email strings */
+  attendees?: string[];
+  /** From getEvent */
+  reminders?: { overrides: { method: string; minutes: number }[] };
 }
 
 /** Calendar list item from calendar API. */

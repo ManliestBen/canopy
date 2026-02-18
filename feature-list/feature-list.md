@@ -45,7 +45,7 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [x] **Edit events** — “Edit in Google Calendar” opens the event in a new tab
 - [x] **Different colors per calendar** — user-chosen color per saved calendar (20 pastels)
 - [x] **Views:** daily, weekly, 2-week (biweekly), monthly
-- [ ] Add events in-app (create new events in the dashboard)
+- [x] Add events in-app (create new events in the dashboard)
 
 ### Weather (nav)
 
