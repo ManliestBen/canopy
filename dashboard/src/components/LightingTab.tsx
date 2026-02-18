@@ -57,14 +57,11 @@ function EntityCard({ entity, onAction }: EntityCardProps) {
       <div className={`card-state ${entity.state}`}>{entity.state}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
         <button
+          type="button"
+          className={`entity-toggle ${isOn ? 'entity-toggle-on' : ''}`}
           onClick={toggle}
           disabled={unavailable || busy}
-          style={{
-            padding: '0.4rem 1rem',
-            background: isOn ? 'var(--on)' : 'var(--bg-card-hover)',
-            color: isOn ? '#0f1419' : 'var(--text)',
-            border: '1px solid var(--border)',
-          }}
+          style={{ padding: '0.4rem 1rem' }}
         >
           {busy ? '…' : isOn ? 'On' : 'Off'}
         </button>
@@ -78,7 +75,7 @@ function EntityCard({ entity, onAction }: EntityCardProps) {
               value={localBrightness}
               onChange={(e) => setBrightness(Number(e.target.value))}
               disabled={unavailable || busy}
-              style={{ flex: 1 }}
+              style={{ flex: 1, ['--range-pct' as string]: localBrightness }}
             />
           </label>
         )}
