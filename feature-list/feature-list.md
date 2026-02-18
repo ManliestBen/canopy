@@ -35,6 +35,7 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
   - [x] Color scheme to match sample images (in this directory)
   - [x] Apple liquid glass–style
   - [x] Bolder, more modern look
+  - [x] **Pride theme** — rainbow gradient background, frosted glass panels, rainbow save buttons (animated), add-calendar modal inputs match add-event styling
 - [ ] **Transparency effect level** — setting to adjust the strength of the glass/transparency effect (user can turn it up or down)
 
 ### Google Calendar (nav)
@@ -43,9 +44,10 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [x] **Calendar CRUD** — add calendar (title, calendar ID, color); edit and remove; 20 color options per calendar
 - [x] **Event detail modal** — click any event card to open a Google Calendar–style detail modal (title, date, time, location, description, calendar name)
 - [x] **Edit events** — “Edit in Google Calendar” opens the event in a new tab
-- [x] **Different colors per calendar** — user-chosen color per saved calendar (20 pastels)
+- [x] **Different colors per calendar** — user-chosen color per saved calendar (20 pastels + optional custom hex)
 - [x] **Views:** daily, weekly, 2-week (biweekly), monthly
 - [x] Add events in-app (create new events in the dashboard)
+- [x] **Clickable calendar** — daily/weekly: click empty time slot to open Add Event with date + nearest hour and 1 hr duration; biweekly/monthly: click a day to open Add Event with date pre-filled
 
 ### Weather (nav)
 
@@ -59,7 +61,10 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 
 - [ ] **Sleep/wake times** — dim or switch to slideshow (see clarifications)
 - [ ] **Photo slideshow** — starts after a configurable delay with no interaction, or as sleep mode
-  - [ ] Photo source TBD; starter set will be provided
+  - [ ] **Primary source:** **Google Photos** — users share albums with the Canopy Gmail account; slideshow uses those albums via Photos Library API (see Input & tradeoffs). No Cloudinary work yet.
+  - [ ] **Configurable album/folder selection** — choose which shared albums (or later, folders) feed the slideshow.
+  - [ ] **Cloudinary** — on the back burner. Not written off: fast, responsive, 10GB more storage than Google; may be revisited for uploads, transforms, or as an alternative source.
+  - [ ] Starter set can be provided (e.g. in a Google Photos album shared with Canopy, or local until Google is wired up).
 
 ### Task list (nav)
 
@@ -127,10 +132,27 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [ ] **Family messaging / announcements** — e.g. “Dinner’s ready” or sticky note on main screen; in-app or HA notifications
 - [ ] **Guest / limited access** — view-only (calendar + weather; no settings or HA controls)
 
+### Canopy service Gmail account
+
+- [ ] **Dedicated Gmail** — A Gmail account has been created for the Canopy service. Potential uses (no code yet; ideas for the roadmap):
+  - **Outbound:** Event or task reminders, family announcements (“Dinner’s ready”), daily agenda digest, or “what’s on the panel today” emails.
+  - **Inbound:** “Email to add” flows (e.g. forward an email to create a task or quick event), or invite/guest-access links sent by email.
+  - **Auth:** Sending from the panel via OAuth or app password for the above. Notifications could be sent through this account so they come from a consistent “Canopy” identity.
+
 ### Other
 
 - [ ] **Energy / utility** — small widget or view for energy/solar (e.g. today’s production/usage) when using HA energy
-- [ ] **Photo source options** — e.g. Google Photos, local/NAS path, or both; explicitly on the roadmap
+- [ ] **Photo source options** — **Google Photos (shared albums with Canopy)** first; **Cloudinary on the back burner** (fast, responsive, more storage; future option). Local/NAS path or combination also on the roadmap.
 - [ ] **Vacation / away mode** — pause or simplify slideshow; minimal screen or reduced HA sensitivity when “away”
 - [ ] **Multi-device / naming** — device name and optional role (e.g. kitchen vs bedroom) for settings and backups
 - [ ] **Responsive design** for mobile app usage
+
+---
+
+## Input & tradeoffs (no code action)
+
+### Photo source: Google Photos first, Cloudinary on the back burner
+
+- **Current plan:** Use **Google Photos** for the slideshow: family shares albums with the Canopy Gmail account; the app uses the Photos Library API to list and display those albums. Lower friction when the family already uses Google Photos.
+- **Cloudinary** is **on the back burner**, not written off: it's fast, responsive, and offers ~10GB more storage than Google. Could be revisited later for uploads, transforms, configurable folders, or as an alternative/extra source. No code planned for Cloudinary until after Google Photos is in place.
+- **Summary:** Google Photos first (shared albums → slideshow). Cloudinary remains a future option for more control, storage, and performance.
