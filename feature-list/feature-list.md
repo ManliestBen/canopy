@@ -139,10 +139,11 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 
 ### Canopy service Gmail account
 
-- [ ] **Dedicated Gmail** — A Gmail account has been created for the Canopy service. Potential uses (no code yet; ideas for the roadmap):
+- [ ] **Dedicated Gmail** — A Gmail account has been created for the Canopy service (**mackinaw.canopy@gmail.com**). Potential uses (no code yet; ideas for the roadmap):
   - **Outbound:** Event or task reminders, family announcements (“Dinner’s ready”), daily agenda digest, or “what’s on the panel today” emails.
   - **Inbound:** “Email to add” flows (e.g. forward an email to create a task or quick event), or invite/guest-access links sent by email.
   - **Auth:** Sending from the panel via OAuth or app password for the above. Notifications could be sent through this account so they come from a consistent “Canopy” identity.
+- [ ] **Stretch: Consolidate Calendar to Canopy Gmail** — Calendar currently uses a different Gmail account and `dashboard/SERVICE_ACCOUNT.json`. Stretch goal: move Calendar over to **mackinaw.canopy@gmail.com** as well (e.g. same project, new service account for that account, or OAuth) so one identity backs Calendar, Photos, and Gmail.
 
 ### Other
 
