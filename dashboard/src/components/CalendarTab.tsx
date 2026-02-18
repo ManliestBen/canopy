@@ -635,7 +635,7 @@ function CalendarEventCard({
       style={backgroundColor ? { backgroundColor } : undefined}
       role="button"
       tabIndex={0}
-      onClick={() => onSelect?.(event)}
+      onClick={(e) => { e.stopPropagation(); onSelect?.(event); }}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(event); } }}
     >
       <div className="event-title">{isContinuation ? `${title} (cont'd)` : title}</div>
@@ -662,6 +662,13 @@ export function CalendarTab() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarsModalOpen, setCalendarsModalOpen] = useState(false);
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
+  const [addEventDefaults, setAddEventDefaults] = useState<{ date: string; startTime?: string; endTime?: string } | null>(null);
+
+  const openAddEvent = (defaults: { date: string; startTime?: string; endTime?: string } | null) => {
+    setAddEventDefaults(defaults);
+    if (savedCalendars.length === 0) setCalendarsModalOpen(true);
+    else setAddEventModalOpen(true);
+  };
 
   const load = async () => {
     setError(null);
@@ -802,7 +809,14 @@ export function CalendarTab() {
     const dayEvents = eventsByDay[key] || [];
     const isToday = key === todayKey;
     return (
-      <div key={key} className={`calendar-day-col${isToday ? ' is-today' : ''}`}>
+      <div
+        key={key}
+        role="button"
+        tabIndex={0}
+        className={`calendar-day-col${isToday ? ' is-today' : ''} calendar-day-col-clickable`}
+        onClick={() => openAddEvent({ date: key })}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAddEvent({ date: key }); } }}
+      >
         <div className="calendar-day-header">{dayName}</div>
         <div className="calendar-day-date">{dateNum}</div>
         <div className="calendar-day-count">
@@ -891,6 +905,21 @@ export function CalendarTab() {
           <div className="calendar-time-grid-slots">
             {days.map((d, colIdx) => (
               <div key={d.key} className="calendar-time-grid-column">
+                <div
+                  className="calendar-time-grid-column-backdrop"
+                  aria-label={`Add event on ${d.dayName} ${d.dateNum}`}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const y = e.clientY - rect.top;
+                    const pct = rect.height > 0 ? y / rect.height : 0;
+                    const hourFraction = pct * (gridEndHour - gridStartHour);
+                    const hour = Math.max(gridStartHour, Math.min(gridEndHour - 1, gridStartHour + Math.round(hourFraction)));
+                    const endHour = Math.min(hour + 1, gridEndHour);
+                    const startStr = `${String(hour).padStart(2, '0')}:00`;
+                    const endStr = endHour === 24 ? '23:59' : `${String(endHour).padStart(2, '0')}:00`;
+                    openAddEvent({ date: d.key, startTime: startStr, endTime: endStr });
+                  }}
+                />
                 {timedByDay[colIdx]
                   .filter((ev) => {
                     const startMin = getMinutesFromMidnight(ev.start);
@@ -913,7 +942,7 @@ export function CalendarTab() {
                           minHeight: 24,
                           ...(customHex ? { backgroundColor: customHex } : {}),
                         }}
-                        onClick={() => setSelectedEvent(ev)}
+                        onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEvent(ev); } }}
                       >
                         <div className="event-title">{ev.summary || '(No title)'}</div>
@@ -994,7 +1023,10 @@ export function CalendarTab() {
       {addEventModalOpen && savedCalendars.length > 0 && (
         <AddEventModal
           savedCalendars={savedCalendars}
-          onClose={() => setAddEventModalOpen(false)}
+          defaultDate={addEventDefaults?.date}
+          defaultStartTime={addEventDefaults?.startTime}
+          defaultEndTime={addEventDefaults?.endTime}
+          onClose={() => { setAddEventModalOpen(false); setAddEventDefaults(null); }}
           onSuccess={() => load()}
         />
       )}
@@ -1011,7 +1043,7 @@ export function CalendarTab() {
           <button
             type="button"
             className="calendar-calendars-btn calendar-add-event-btn"
-            onClick={() => (savedCalendars.length > 0 ? setAddEventModalOpen(true) : setCalendarsModalOpen(true))}
+            onClick={() => openAddEvent(null)}
             aria-label="Add event"
             title={savedCalendars.length === 0 ? 'Add a calendar first' : undefined}
           >

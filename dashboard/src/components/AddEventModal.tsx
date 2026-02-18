@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createCalendarEvent, type CreateCalendarEventPayload, type SavedCalendar } from '../api';
 
 export const RECURRENCE_OPTIONS: { value: string; label: string; rrule?: string[] }[] = [
@@ -32,17 +32,19 @@ export const REMINDER_PRESETS: { label: string; method: 'popup' | 'email'; minut
 interface AddEventModalProps {
   savedCalendars: SavedCalendar[];
   defaultDate?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function AddEventModal({ savedCalendars, defaultDate, onClose, onSuccess }: AddEventModalProps) {
+export function AddEventModal({ savedCalendars, defaultDate, defaultStartTime, defaultEndTime, onClose, onSuccess }: AddEventModalProps) {
   const today = new Date().toISOString().slice(0, 10);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(defaultDate || today);
   const [allDay, setAllDay] = useState(false);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [startTime, setStartTime] = useState(defaultStartTime ?? '09:00');
+  const [endTime, setEndTime] = useState(defaultEndTime ?? '10:00');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [calendarId, setCalendarId] = useState(savedCalendars[0]?.calendarId ?? '');
@@ -54,6 +56,13 @@ export function AddEventModal({ savedCalendars, defaultDate, onClose, onSuccess 
   const [guestsText, setGuestsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDate(defaultDate ?? new Date().toISOString().slice(0, 10));
+    setStartTime(defaultStartTime ?? '09:00');
+    setEndTime(defaultEndTime ?? '10:00');
+    if (defaultStartTime != null && defaultEndTime != null) setAllDay(false);
+  }, [defaultDate, defaultStartTime, defaultEndTime]);
 
   const buildRecurrence = (): string[] | undefined => {
     if (recurrencePreset === 'none') return undefined;

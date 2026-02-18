@@ -568,6 +568,72 @@ html[data-theme="pride"] body {
   border-color: rgba(255, 180, 0, 0.6);
 }
 
+/* Pride: add calendar modal inputs — match add event modal (frosted glass) */
+[data-theme="pride"] .calendar-management-input,
+[data-theme="pride"] .calendar-management-hex-input,
+[data-theme="pride"] .calendars-modal select {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+[data-theme="pride"] .calendar-management-input:focus,
+[data-theme="pride"] .calendar-management-hex-input:focus,
+[data-theme="pride"] .calendars-modal select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Pride: primary/accent buttons — animated rainbow with alpha for readable text */
+[data-theme="pride"] .add-event-btn-primary,
+[data-theme="pride"] .calendar-management-submit,
+[data-theme="pride"] .event-detail-edit-link {
+  background: linear-gradient(
+    90deg,
+    rgba(228, 3, 3, 0.85) 0%,
+    rgba(255, 140, 0, 0.85) 17%,
+    rgba(255, 237, 0, 0.85) 33%,
+    rgba(0, 128, 38, 0.85) 50%,
+    rgba(36, 64, 142, 0.85) 67%,
+    rgba(115, 41, 130, 0.85) 83%,
+    rgba(228, 3, 3, 0.85) 100%
+  );
+  background-size: 200% 100%;
+  animation: rainbow-border-flow 2.5s linear infinite;
+  color: #1a0a2e;
+  border: none;
+}
+
+[data-theme="pride"] .add-event-btn-primary:hover:not(:disabled),
+[data-theme="pride"] .calendar-management-submit:hover:not(:disabled),
+[data-theme="pride"] .event-detail-edit-link:hover {
+  filter: brightness(1.08);
+}
+
+[data-theme="pride"] .add-event-day-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(228, 3, 3, 0.85),
+    rgba(255, 140, 0, 0.85),
+    rgba(255, 237, 0, 0.85),
+    rgba(0, 128, 38, 0.85),
+    rgba(36, 64, 142, 0.85),
+    rgba(115, 41, 130, 0.85)
+  );
+  color: #1a0a2e;
+  border: none;
+}
+
+[data-theme="pride"] .calendar-management-color-preview-btn:hover {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="pride"] .calendar-management-swatch.is-selected {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
 /* Pride: entity toggle — ON and OFF match OFF styling; ON gets animated rainbow border */
 [data-theme="pride"] .card .entity-toggle {
   background: var(--bg-card-hover);
@@ -1143,9 +1209,18 @@ input[type="range"] {
   border-right: none;
 }
 
+/* Clickable backdrop: empty time slots open Add Event with date + nearest hour */
+.calendar-time-grid-column-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  cursor: pointer;
+}
+
 /* Timed event cards: same 0.75rem inset as all-day row / biweekly-monthly columns */
 .calendar-time-grid-event {
   position: absolute;
+  z-index: 1;
   left: 0.75rem;
   right: 0.75rem;
   border-radius: 8px;
@@ -1201,6 +1276,10 @@ input[type="range"] {
 .calendar-day-col.is-today {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.calendar-day-col-clickable {
+  cursor: pointer;
 }
 
 .calendar-day-header {
@@ -1543,6 +1622,11 @@ input[type="range"] {
 .add-event-row .add-event-field {
   flex: 1;
   min-width: 0;
+}
+
+/* Align checkbox with the date input (label height + gap so checkbox lines up with input) */
+.add-event-row .add-event-field.add-event-checkbox {
+  padding-top: calc(1.25em + 0.35rem);
 }
 
 .add-event-checkbox label {
