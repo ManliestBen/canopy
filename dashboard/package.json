@@ -11,8 +11,8 @@
     "preview": "vite preview",
     "serve": "nodemon server.js",
     "test": "vitest run",
-"test:watch": "vitest",
-    "oauth-get-tokens": "node scripts/oauth-get-tokens.js"
+    "test:watch": "vitest",
+    "send-test-email": "node scripts/send-test-email.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
