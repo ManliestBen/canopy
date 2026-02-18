@@ -34,7 +34,8 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [ ] **Themes** (each with dark/light mode):
   - [x] Color scheme to match sample images (in this directory)
   - [x] Apple liquid glass–style
-  - [ ] Bolder, more modern look
+  - [x] Bolder, more modern look
+- [ ] **Transparency effect level** — setting to adjust the strength of the glass/transparency effect (user can turn it up or down)
 
 ### Google Calendar (nav)
 

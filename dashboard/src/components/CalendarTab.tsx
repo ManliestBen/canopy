@@ -701,10 +701,6 @@ export function CalendarTab() {
         />
       )}
       <div className="calendar-header">
-        <span className="calendar-meta">
-          {calendarMeta.calendarSummary ? `${calendarMeta.calendarSummary} · ` : ''}
-          {events.length} event{events.length !== 1 ? 's' : ''}
-        </span>
         <button
           type="button"
           className="calendar-calendars-btn"

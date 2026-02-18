@@ -17,18 +17,22 @@ interface TabConfig {
 }
 
 const THEME_KEY = 'canopy-theme';
-type ThemeValue = 'light' | 'dark' | 'system';
+type ThemeValue = 'light' | 'dark' | 'system' | 'bold-light' | 'bold-dark' | 'pride';
 
 const THEME_OPTIONS: { value: ThemeValue; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+  { value: 'bold-light', label: 'Bold (Light)' },
+  { value: 'bold-dark', label: 'Bold (Dark)' },
+  { value: 'pride', label: 'Pride' },
 ];
 
 function getStoredTheme(): ThemeValue {
   try {
     const s = localStorage.getItem(THEME_KEY);
-    if (s === 'light' || s === 'dark' || s === 'system') return s;
+    if (['light', 'dark', 'system', 'bold-light', 'bold-dark', 'pride'].includes(s ?? '')) return s as ThemeValue;
+    if (s === 'rainbow') return 'pride';
     if (s === 'liquid-glass-light') return 'light';
     if (s === 'liquid-glass-dark') return 'dark';
   } catch {}
@@ -125,14 +129,6 @@ function App() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={loading}
-              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-            >
-              {loading ? '…' : 'Refresh'}
-            </button>
           </div>
         </div>
       </header>
