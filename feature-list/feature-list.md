@@ -90,6 +90,11 @@ A combination of **Home Assistant**–style smart home control and **Skylight**�
 - [ ] Add first user and set location during initial setup
 - [ ] Google Calendar and sleep/wake can be configured later
 
+### Development & CI
+
+- [ ] **Unit tests** — add unit tests for the app (e.g. dashboard)
+- [ ] **GitHub CI** — GitHub Actions workflow runs tests on push/PR; branch protection on the deployed branch requires tests to pass before merge (free for public repos; private repos get 2,000 Actions minutes/month)
+
 ---
 
 ## Stretch goals
