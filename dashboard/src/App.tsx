@@ -16,6 +16,42 @@ interface TabConfig {
   domains?: string[];
 }
 
+const THEME_KEY = 'canopy-theme';
+type ThemeValue = 'light' | 'dark' | 'system' | 'bold-light' | 'bold-dark' | 'pride';
+
+const THEME_OPTIONS: { value: ThemeValue; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'bold-light', label: 'Bold (Light)' },
+  { value: 'bold-dark', label: 'Bold (Dark)' },
+  { value: 'pride', label: 'Pride' },
+];
+
+function getStoredTheme(): ThemeValue {
+  try {
+    const s = localStorage.getItem(THEME_KEY);
+    if (['light', 'dark', 'system', 'bold-light', 'bold-dark', 'pride'].includes(s ?? '')) return s as ThemeValue;
+    if (s === 'rainbow') return 'pride';
+    if (s === 'liquid-glass-light') return 'light';
+    if (s === 'liquid-glass-dark') return 'dark';
+  } catch {}
+  return 'system';
+}
+
+function getSystemTheme(): 'light' | 'dark' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(value: ThemeValue) {
+  const html = document.documentElement;
+  if (value === 'system') html.setAttribute('data-theme', getSystemTheme());
+  else html.setAttribute('data-theme', value);
+}
+
+// Apply stored theme before first paint to avoid flash
+applyTheme(getStoredTheme());
+
 const TABS: TabConfig[] = [
   { id: 'lighting', label: 'Lighting', domain: 'light' },
   { id: 'climate', label: 'Climate', domain: 'climate' },
@@ -31,6 +67,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('lighting');
+  const [theme, setTheme] = useState<ThemeValue>(() => getStoredTheme());
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -52,6 +89,19 @@ function App() {
     return () => clearInterval(t);
   }, [refresh]);
 
+  useEffect(() => {
+    applyTheme(theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {}
+    if (theme === 'system') {
+      const m = window.matchMedia('(prefers-color-scheme: dark)');
+      const update = () => document.documentElement.setAttribute('data-theme', m.matches ? 'dark' : 'light');
+      m.addEventListener('change', update);
+      return () => m.removeEventListener('change', update);
+    }
+  }, [theme]);
+
   const onServiceCall = useCallback(() => {
     refresh();
   }, [refresh]);
@@ -65,16 +115,21 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <h1>Canopy</h1>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading}
-            style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          >
-            {loading ? '…' : 'Refresh'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>Theme</span>
+            <select
+              aria-label="Theme"
+              value={theme}
+              onChange={(e) => setTheme((e.target.value as ThemeValue))}
+              className="theme-select"
+            >
+              {THEME_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
 
@@ -90,7 +145,7 @@ function App() {
         ))}
       </nav>
 
-      <main className="tab-panel">
+      <main className={`tab-panel${activeTab === 'calendar' ? ' tab-panel--calendar' : ''}`}>
         {error && (
           <div className="error-banner">
             {error}. Check that the HA proxy is running and VITE_HA_BASE_URL / VITE_HA_TOKEN are set.
