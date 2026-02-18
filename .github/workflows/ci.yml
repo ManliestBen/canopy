@@ -1,6 +1,9 @@
 # Run build and tests on push and pull requests.
 # Branch protection can require this check before merging into dev or main.
 # Flow: feature branches → PR into dev → PR from dev into main (deploy).
+#
+# No secrets required: all HA and Google Calendar API calls are mocked in tests.
+# Tests never connect to your Home Assistant or Google—they cannot control real devices.
 
 name: CI
 

@@ -1,0 +1,4 @@
+# Code owners: these owners will be requested for review when someone opens a PR.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/codeowners
+
+* @ManliestBen

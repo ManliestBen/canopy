@@ -24,7 +24,20 @@ Using a **dev** integration branch is a solid approach:
   4. Runs `npm run build`
   5. Runs `npm test`
 
-- **Placeholder test script** — The dashboard’s `package.json` has `"test": "echo 'No tests yet'"` so the workflow passes until real tests are added. Once you add a test runner (e.g. Vitest), replace that script with the real test command.
+- **No secrets or real APIs** — Tests use mocks only. The HA API and Google Calendar API are fully mocked (`fetch` and the `api` module), so CI does **not** need `VITE_HA_BASE_URL`, `VITE_HA_TOKEN`, or any Google credentials. Tests **never** connect to your Home Assistant instance or Google, and **cannot** control real devices.
+
+### Test safety: no real devices
+
+The test suite is designed so that **nothing in your home can be controlled by CI or by running tests locally**:
+
+| What tests do | What tests do *not* do |
+|---------------|-------------------------|
+| Replace `fetch` with a mock (api tests) | Send HTTP requests to your HA URL |
+| Replace the entire `api` module with mocks (component tests) | Use `VITE_HA_TOKEN` or any real token |
+| Assert that `callService('light', 'turn_off', …)` was called with the right args | Actually call Home Assistant services |
+| Assert that `createCalendarEvent(payload)` was called | Hit Google Calendar API |
+
+So GitHub Actions can run the full test suite **without any secret keys**, and your lights, locks, thermostats, and calendars are never touched by the tests.
 
 ---
 
