@@ -11,10 +11,12 @@
     "preview": "vite preview",
     "serve": "nodemon server.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "send-test-email": "node scripts/send-test-email.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
+    "open": "^10.0.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "googleapis": "^128.0.0",
